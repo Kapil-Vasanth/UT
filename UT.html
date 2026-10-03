@@ -1,0 +1,3125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>GST Invoice Book (offline)</title>
+<style>
+:root{--bg:#e9edf1;--panel:#fff;--ink:#14202e;--mute:#5d6b7a;--line:#d3dbe3;--navy:#0f2a43;--navy2:#1b3d5e;--amber:#e39a1b;--green:#1d7a4a;--red:#b3392b;--blue:#1e5fa8}
+*{box-sizing:border-box}
+html,body{margin:0}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif}
+.shell{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+.chrome{background:var(--navy);color:#fff;padding:18px 10px;position:sticky;top:0;height:100vh}
+.chrome h1{font-size:16px;margin:0 8px 2px;font-weight:700}
+.chrome .sub{font-size:12px;color:#9fb6cc;margin:0 8px 18px}
+.chrome button{display:block;width:100%;text-align:left;background:none;border:0;color:#c9d8e6;padding:9px 10px;margin:2px 0;border-radius:6px;font:inherit;cursor:pointer;border-left:3px solid transparent}
+.chrome button:hover{background:var(--navy2)}
+.chrome button.on{background:var(--navy2);color:#fff;border-left-color:var(--amber)}
+.chrome .foot{position:absolute;left:18px;right:10px;bottom:16px;font-size:11.5px;color:#8ba3bb}
+main{padding:22px 26px 70px;min-width:0}
+h2{font-size:20px;margin:0 0 14px}
+h3{font-size:15px;margin:0 0 10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.g2{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+label{display:block;font-size:12px;color:var(--mute);font-weight:600}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:5px;font:inherit;background:#fff;color:var(--ink);margin-top:3px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+textarea{resize:vertical;min-height:60px}
+.btn{background:var(--navy);color:#fff;border:0;border-radius:5px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--navy2)}
+.btn.alt{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.btn.amber{background:var(--amber);color:#1c1300}
+.btn.red{background:var(--red)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.stat{padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.stat .n{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .l{color:var(--mute);font-size:12.5px}
+table.t{width:100%;border-collapse:collapse;background:var(--panel)}
+table.t th{font-size:12px;color:var(--mute);text-align:left;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+table.t td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t tr:hover td{background:#f5f8fb}
+.scroll{overflow-x:auto}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.chip.paid{background:#dcf1e5;color:var(--green)}.chip.part{background:#fdf0d2;color:#8a5a00}.chip.unpaid{background:#e3ecf6;color:var(--blue)}.chip.can{background:#f5dcd8;color:var(--red)}.chip.irn{background:#fdf0d2;color:#8a5a00}
+.muted{color:var(--mute)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.lines input{margin:0;padding:5px;min-width:0}
+.lines td{padding:3px}
+.lines th{font-size:11.5px;color:var(--mute);text-align:left;padding:3px}
+.totbox{margin-left:auto;width:300px;font-variant-numeric:tabular-nums}
+.totbox div{display:flex;justify-content:space-between;padding:3px 0}
+.totbox .g{border-top:2px solid var(--ink);font-weight:700;font-size:16px;margin-top:4px;padding-top:6px}
+
+.modal{position:fixed;inset:0;background:rgba(15,42,67,.45);display:flex;align-items:center;justify-content:center;z-index:100}
+.mbox{background:#fff;border-radius:8px;padding:18px;max-width:480px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#toast{position:fixed;bottom:18px;right:18px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:6px;display:none;z-index:99}
+.warn{background:#fdf0d2;border:1px solid #ecc977;padding:10px 14px;border-radius:6px;margin-bottom:14px}
+.err{color:var(--red);font-size:12px}
+@media (max-width:820px){.shell{grid-template-columns:1fr}.chrome{position:static;height:auto}.chrome .foot{display:none}}
+
+/* ======== TAX INVOICE (print replica) ======== */
+.paper{overflow-x:auto;padding-bottom:10px}
+.inv{width:198mm;margin:0 auto;background:#fff;color:#000;border:1px solid #000;font:7.6pt/1.3 Tahoma,Verdana,Geneva,Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.inv *{box-sizing:border-box}
+.inv .hdr{display:grid;grid-template-columns:36mm 1fr 36mm;align-items:center;padding:1.5mm 2mm;min-height:34mm}
+.inv .hdr .lg img{max-width:32mm;max-height:34mm;display:block}
+.inv .hdr .qr{text-align:right}.inv .hdr .qr img{width:34mm;height:34mm;object-fit:contain}
+.inv .co{text-align:center;font-size:7pt;line-height:1.35}
+.inv .co .nm{font-size:11.5pt;font-weight:700;line-height:1.25;margin-bottom:.5mm}
+.inv .co .em{margin-top:2.5mm}
+.inv .ttl{background:#d9d9d9;border-top:1px solid #000;border-bottom:1px solid #000;text-align:center;padding:.8mm 0 .6mm}
+.inv .ttl b{font-size:11pt;display:block;line-height:1.2}.inv .ttl small{font-size:5.8pt;display:block}
+.inv .irn{display:flex;justify-content:space-between;gap:4mm;padding:.5mm 1.5mm;border-bottom:1px solid #000;font-size:6.6pt}
+.inv .irn span{word-break:break-all}
+.inv .mid{display:grid;grid-template-columns:62% 38%;border-bottom:1px solid #000}
+.inv .ml{padding:1mm 1.5mm 0;display:flex;flex-direction:column}
+.inv .mr{border-left:1px solid #000;display:flex;flex-direction:column}
+.inv .u{text-decoration:underline;font-weight:700;margin-top:.8mm}
+.inv .nm2{font-weight:700;font-size:8pt}
+.inv .pre{white-space:pre-line}
+.inv .kv2{display:grid;grid-template-columns:1fr 1fr;margin-top:.6mm}
+.inv .k{display:inline-block;min-width:17mm}
+.inv .k2{display:inline-block;min-width:20mm}
+.inv .through{margin-top:auto;border-top:1px solid #000;margin-left:-1.5mm;margin-right:-1.5mm;padding:.6mm 1.5mm;font-size:7.6pt}
+.inv .rg{display:grid;grid-template-columns:27mm 4mm 1fr;border-bottom:1px dotted #000;padding:.9mm 1.5mm .3mm;min-height:4.8mm}
+.inv .rg.in{font-size:9pt}.inv .rg.in .v{font-weight:700;font-size:9.5pt}
+.inv .rd{padding:.9mm 1.5mm;flex:1}
+.inv .eway{display:grid;grid-template-columns:36% 36% 28%;border-bottom:1px solid #000;padding:.7mm 1.5mm;font-weight:700;font-size:7pt}
+table.it{width:100%;border-collapse:collapse;table-layout:fixed}
+.inv .it th{font-weight:700;border-bottom:1px solid #000;border-left:1px solid #000;padding:.8mm .5mm;text-align:center;font-size:7pt;line-height:1.15}
+.inv .it td{border-left:1px solid #000;padding:.6mm 1mm;vertical-align:top;font-size:6.5pt}
+.inv .it th:first-child,.inv .it td:first-child{border-left:0}
+.inv .it td.r{text-align:right}.inv .it td.c{text-align:center}
+.inv .it tfoot td{border-top:1px solid #000;border-bottom:1px solid #000;font-weight:700;padding:.8mm 1mm;font-size:7pt}
+.inv .bot{display:grid;grid-template-columns:62% 38%;border-bottom:1px solid #000}
+.inv .bl{padding:1.2mm 1.5mm}
+.inv .br{border-left:1px solid #000;padding:1.2mm 2mm;font-size:7pt}
+.inv .tx{display:grid;grid-template-columns:1fr 22mm 24mm;padding:.3mm 0}
+.inv .tx .m{text-align:right}.inv .tx .a{text-align:right}
+.inv .words{margin-top:2.2mm;font-size:8pt}
+.inv .words div{margin-top:.6mm}
+.inv .rt{display:grid;grid-template-columns:62% 38%;border-bottom:1px solid #000}
+.inv .rt .rl{padding:1.2mm 1.5mm;font-size:7.2pt;min-height:9mm}
+.inv .rt .rr{border-left:1px solid #000;padding:1mm 2mm;display:flex;justify-content:space-between;align-items:center;font-size:8pt}
+.inv .rt .rs{font-size:15pt;margin:0 3mm 0 auto;font-weight:700}
+.inv .rt .tot{font-size:10pt}
+.inv .tw{padding:1.2mm 1.5mm;width:62%;font-size:8.2pt;font-weight:700;border-bottom:1px solid #000;border-right:0}
+.inv .twrow{border-bottom:1px solid #000}
+.inv .twrow .tw{border-bottom:0;width:62%}
+.inv .tc{display:grid;grid-template-columns:62% 38%;min-height:30mm}
+.inv .tcl{padding:1.2mm 1.5mm;font-size:6.1pt;line-height:1.55}
+.inv .tcl .u{font-size:6.5pt}
+.inv .tcr{border-left:1px solid #000;padding:1mm 1.5mm;display:flex;flex-direction:column;font-size:7pt}
+.inv .tcr .cert{font-style:italic;font-size:6.4pt}
+.inv .tcr .for{margin-top:1.5mm;text-align:right;font-weight:700;font-style:italic;font-size:7.2pt}
+.inv .tcr .sig{margin-top:auto;border-top:1px solid #000;width:62%;margin-left:auto;text-align:right;font-weight:700;font-size:6.5pt;padding-top:.6mm}
+.inv .bank{border-top:1px solid #000;padding:.9mm 1.5mm;font-weight:700;font-size:7pt}
+
+@media print{
+ @page{size:A4;margin:6mm}
+ html,body{background:#fff}
+ .chrome,.noprint,#toast{display:none!important}
+ .shell{display:block}
+ main{padding:0}
+ .paper{overflow:visible;padding:0}
+ .inv{margin:0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="chrome" id="nav"></nav>
+  <main id="app"></main>
+</div>
+<div id="toast"></div>
+
+<script>
+/* qrcode-generator 2.0.4 (MIT) inlined so the app works offline */
+//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+
+</script>
+<script>
+/* =================== storage =================== */
+const PUBLISHED = true;
+const KEY = 'gstInvoiceBook.v1';
+const DEF_DECL = 'I we hereby certify my/our Registration Certificate under the GST Act. 2017 is in force on the date on which the sale of the goods specified in this bill/cash memorandum is made by me/us and that the transaction of the sale covered by this bill/cash memorandum has been effected by me/us in the regular course of my/our business.';
+function blankDB(){
+  return {company:{name:'',works:'',email:'',state:'',stateCode:'',gstin:'',cin:'',pan:'',extra:'',logo:'',bank:'',prefix:'INV',startNo:1,gstRate:18,einv:false,loc:'',pin:'',declaration:DEF_DECL,terms:''},
+          parties:[],invoices:[],payments:[],counters:{},audit:[]};
+}
+function loadDB(){
+  try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);const b=blankDB();return Object.assign(b,o,{company:Object.assign(b.company,o.company||{})});}}catch(e){}
+  return blankDB();
+}
+let db = loadDB();
+let storageOK = true;
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(db));}
+  catch(e){storageOK=false;toast('Could not save in this browser. Use Backup > Export now.');}
+}
+function log(action,ref){db.audit.unshift({t:new Date().toISOString(),action,ref:ref||''});if(db.audit.length>500)db.audit.length=500;}
+
+/* =================== helpers =================== */
+function dialog(msg,o){
+  o=o||{};
+  return new Promise(res=>{
+    const w=document.createElement('div');w.className='modal noprint';
+    w.innerHTML='<div class="mbox"><div style="white-space:pre-line">'+esc(msg)+'</div>'+(o.input?'<input id="mi" style="margin-top:10px">':'')+'<div class="row" style="margin-top:14px;justify-content:flex-end">'+(o.cancel===false?'':'<button class="btn alt" id="mc">Cancel</button>')+'<button class="btn" id="mo">'+(o.ok||'OK')+'</button></div></div>';
+    document.body.appendChild(w);
+    const done=v=>{w.remove();res(v);};
+    w.querySelector('#mo').onclick=()=>done(o.input?w.querySelector('#mi').value:true);
+    const c=w.querySelector('#mc');if(c)c.onclick=()=>done(o.input?null:false);
+    const i=w.querySelector('#mi');if(i)i.focus();
+  });
+}
+const askYes=(m,ok)=>dialog(m,{ok:ok||'Yes, continue'});
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { const n=parseFloat(v); return isFinite(n)?n:0; };
+const round2 = x => Math.round((x+Number.EPSILON)*100)/100;
+const fmt2 = x => (x===''||x==null||isNaN(+x))?'':(+x).toFixed(2);
+const fmt3 = x => (x===''||x==null||isNaN(+x))?'':(+x).toFixed(3);
+const inr = x => (+x).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dmy(d,short){if(!d)return '';const [y,m,da]=d.split('-');return da+'/'+MON[+m-1]+'/'+(short?y.slice(2):y);}
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function hhmm(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function fyOf(d){const [y,m]=d.split('-').map(Number);const s=m>=4?y:y-1;return String(s).slice(2)+'-'+String(s+1).slice(2);}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3200);}
+
+/* Indian number words */
+const ONES=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+const TENS=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+const b100=n=>n<20?ONES[n]:TENS[Math.floor(n/10)]+(n%10?' '+ONES[n%10]:'');
+const b1000=n=>{const h=Math.floor(n/100),r=n%100;return (h?ONES[h]+' Hundred'+(r?' ':''):'')+(r?b100(r):'');};
+function intWords(n){
+  if(n===0)return '';
+  const cr=Math.floor(n/1e7);n%=1e7;const lk=Math.floor(n/1e5);n%=1e5;const th=Math.floor(n/1e3);n%=1e3;const p=[];
+  if(cr)p.push(intWords(cr)+(cr===1?' Crore':' Crores'));
+  if(lk)p.push(b100(lk)+(lk===1?' Lac':' Lacs'));
+  if(th)p.push(b100(th)+' Thousand');
+  if(n)p.push(b1000(n));
+  return p.join(' ');
+}
+function moneyWords(x){
+  x=round2(Math.abs(x));const r=Math.floor(x),p=Math.round((x-r)*100);
+  if(!r&&!p)return '';
+  let s='';if(r)s+=intWords(r);if(p)s+=(r?' And ':'')+b100(p)+' Paise';
+  return s+' ';
+}
+
+/* GSTIN check (format + checksum) */
+function gstinProblem(g){
+  g=(g||'').trim().toUpperCase();
+  if(!g)return '';
+  if(!/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(g))return 'GSTIN format looks wrong';
+  const cs='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';let sum=0;
+  for(let i=0;i<14;i++){let p=cs.indexOf(g[i])*(i%2?2:1);sum+=Math.floor(p/36)+p%36;}
+  return cs[(36-sum%36)%36]===g[14]?'':'GSTIN check digit does not match';
+}
+
+/* =================== GST maths =================== */
+function calc(inv){
+  const co=inv.co||db.company;
+  const rate=num(inv.gstRate);
+  const intra=String(inv.supplyTo).trim()===String(co.stateCode).trim();
+  /* tax is rounded line by line (half-up) and then added up, as the e-invoice schema expects */
+  const lines=inv.lines.map(l=>{
+    const amtP=Math.round(num(l.weight)*num(l.rate)*100);
+    let cg=0,sg=0,ig=0;
+    if(intra){cg=Math.round(amtP*rate/200)/100;sg=cg;}else{ig=Math.round(amtP*rate/100)/100;}
+    return Object.assign({},l,{amount:amtP/100,cgst:cg,sgst:sg,igst:ig});
+  });
+  const sum=k=>round2(lines.reduce((a,l)=>a+l[k],0));
+  const taxable=sum('amount'),cgst=sum('cgst'),sgst=sum('sgst'),igst=sum('igst');
+  const reels=lines.reduce((a,l)=>a+num(l.reels),0);
+  const weight=lines.reduce((a,l)=>a+num(l.weight),0);
+  const raw=taxable+cgst+sgst+igst,total=Math.round(raw),roundOff=round2(total-raw);
+  return {lines,taxable,reels,weight,intra,rate,cgst,sgst,igst,roundOff,total};
+}
+
+/* =================== state =================== */
+const S={view:'dash',draft:null,viewId:null,f:{q:'',st:'',from:'',to:''},party:null,pay:null,err:''};
+const NAV=[['dash','Dashboard'],['invoices','Invoices'],['new','New invoice'],['parties','Contacts'],['payments','Payments'],['company','Company setup'],['backup','Backup']];
+function go(v){S.view=v;if(v==='new'){S.draft=newDraft();S.err='';}if(v==='parties')S.party=null;if(v==='payments')S.pay=newPay();render();window.scrollTo(0,0);}
+
+function paidOf(id){return round2(db.payments.filter(p=>p.invoiceId===id).reduce((a,p)=>a+num(p.amount),0));}
+function balOf(inv){return round2(inv.totals.total-paidOf(inv.id));}
+function stOf(inv){if(inv.status==='cancelled')return 'can';const b=balOf(inv);if(b<=0)return 'paid';return paidOf(inv.id)>0?'part':'unpaid';}
+const ST={can:'Cancelled',paid:'Paid',part:'Part paid',unpaid:'Unpaid'};
+function partyBal(pid){
+  const p=db.parties.find(x=>x.id===pid);
+  const inv=db.invoices.filter(i=>i.billId===pid&&i.status!=='cancelled').reduce((a,i)=>a+i.totals.total,0);
+  const pay=db.payments.filter(x=>x.partyId===pid).reduce((a,x)=>a+num(x.amount),0);
+  return round2(num(p&&p.opening)+inv-pay);
+}
+
+/* =================== render shell =================== */
+function render(){
+  $('nav').innerHTML='<h1>GST Invoice Book</h1><div class="sub">Works offline · data stays in this browser</div>'+
+    NAV.map(([k,l])=>`<button class="${(S.view===k||(S.view==='view'&&k==='invoices'))?'on':''}" onclick="go('${k}')">${l}</button>`).join('')+
+    `<div class="foot">${db.invoices.length} invoices · ${db.parties.length} contacts</div>`;
+  const V={dash:dashView,invoices:invoicesView,new:formView,view:viewView,parties:partiesView,payments:paymentsView,company:companyView,backup:backupView}[S.view];
+  $('app').innerHTML=V();
+  if(S.view==='invoices')renderList();
+  if(S.view==='new'){updateTotals();noCheck();qrCheck();}
+}
+
+/* =================== dashboard =================== */
+function dashView(){
+  const fy=fyOf(todayISO());
+  const act=db.invoices.filter(i=>i.status!=='cancelled');
+  const fyInv=act.filter(i=>fyOf(i.date)===fy);
+  const sales=fyInv.reduce((a,i)=>a+i.totals.total,0);
+  const out=act.reduce((a,i)=>a+Math.max(0,balOf(i)),0);
+  const recent=db.invoices.slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,6);
+  const setup=!db.company.name?`<div class="warn"><b>Start here:</b> add your company details under <a href="#" onclick="go('company');return false">Company setup</a>, then add contacts and create your first invoice. Or <a href="#" onclick="loadSample();return false">load the sample data</a> (the Jodhani Papers invoice) to see the exact layout.</div>`:'';
+  const sampleBtn=(!db.invoices.length)?`<div class="card" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div style="flex:1;min-width:240px"><b>Want to test it first?</b><div class="muted">Adds a sample company, two contacts and your Jodhani invoice, so you can try printing, searching, payments and creating new invoices.</div></div><button class="btn amber" onclick="loadSample()">Load sample data</button></div>`:'';
+  return `<h2>Dashboard</h2>${sampleBtn}${setup}
+  <div class="grid g4" style="margin-bottom:16px">
+   <div class="stat"><div class="n">₹ ${inr(sales)}</div><div class="l">Sales in FY ${fy}</div></div>
+   <div class="stat"><div class="n">₹ ${inr(out)}</div><div class="l">Outstanding from customers</div></div>
+   <div class="stat"><div class="n">${fyInv.length}</div><div class="l">Invoices in FY ${fy}</div></div>
+   <div class="stat"><div class="n">${db.parties.length}</div><div class="l">Contacts</div></div>
+  </div>
+  <div class="card"><h3>Recent invoices</h3>${recent.length?`<div class="scroll"><table class="t"><tr><th>Invoice</th><th>Date</th><th>Customer</th><th class="n">Amount</th><th>Status</th></tr>${recent.map(i=>`<tr style="cursor:pointer" onclick="openInv('${i.id}')"><td><b>${esc(i.no)}</b></td><td>${dmy(i.date)}</td><td>${esc(i.bill.name)}</td><td class="n">${inr(i.totals.total)}</td><td><span class="chip ${stOf(i)}">${ST[stOf(i)]}</span></td></tr>`).join('')}</table></div>`:'<p class="muted">No invoices yet. Choose New invoice to create one.</p>'}</div>`;
+}
+
+/* =================== invoice list =================== */
+function invoicesView(){
+  const f=S.f;
+  return `<h2>Invoices</h2>
+  <div class="card"><div class="row">
+   <label style="flex:2;min-width:220px">Search<input id="fq" value="${esc(f.q)}" placeholder="Invoice no, customer, GSTIN, amount, e-way, truck" oninput="S.f.q=this.value;renderList()"></label>
+   <label>Status<select onchange="S.f.st=this.value;renderList()">${[['','All'],['unpaid','Unpaid'],['part','Part paid'],['paid','Paid'],['can','Cancelled']].map(([v,l])=>`<option value="${v}" ${f.st===v?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>From<input type="date" value="${f.from}" onchange="S.f.from=this.value;renderList()"></label>
+   <label>To<input type="date" value="${f.to}" onchange="S.f.to=this.value;renderList()"></label>
+   <button class="btn" onclick="go('new')">New invoice</button>
+  </div></div><div class="card" id="list"></div>`;
+}
+function renderList(){
+  const f=S.f,q=f.q.trim().toLowerCase();
+  const rows=db.invoices.filter(i=>{
+    if(f.st&&stOf(i)!==f.st)return false;
+    if(f.from&&i.date<f.from)return false;
+    if(f.to&&i.date>f.to)return false;
+    if(q){const hay=[i.no,i.bill.name,i.bill.gstin,i.ewayNo,i.truck,i.irn,String(i.totals.total),i.lrNo].join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  }).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
+  const tot=rows.filter(i=>i.status!=='cancelled').reduce((a,i)=>a+i.totals.total,0);
+  $('list').innerHTML=rows.length?`<div class="scroll"><table class="t"><tr><th>Invoice</th><th>Date</th><th>Customer</th><th class="n">Amount</th><th class="n">Balance</th><th>Status</th><th></th></tr>
+  ${rows.map(i=>`<tr><td><b>${esc(i.no)}</b>${(db.company.einv&&!i.irn&&i.status!=='cancelled')?' <span class="chip irn">IRN pending</span>':''}</td><td>${dmy(i.date)}</td><td>${esc(i.bill.name)}<div class="muted" style="font-size:12px">${esc(i.bill.gstin||'')}</div></td><td class="n">${inr(i.totals.total)}</td><td class="n">${i.status==='cancelled'?'-':inr(balOf(i))}</td><td><span class="chip ${stOf(i)}">${ST[stOf(i)]}</span></td><td style="white-space:nowrap"><button class="btn sm" onclick="openInv('${i.id}')">Open / print</button></td></tr>`).join('')}
+  </table></div><p class="muted" style="margin:10px 0 0">${rows.length} invoices · total ₹ ${inr(tot)} (cancelled excluded)</p>`:'<p class="muted">No invoices match. Change the filters or create a new invoice.</p>';
+}
+function openInv(id){S.viewId=id;S.view='view';render();window.scrollTo(0,0);}
+
+/* =================== invoice form =================== */
+function blankLine(){return {desc:'',ord:'',hsn:'',bf:'',gsm:'',size:'',sizeUnit:'CM',reels:'',weight:'',unit:'KGS',rate:''};}
+function autoNo(d){const fy=fyOf(d);return `${db.company.prefix||'INV'}/${fy}/${db.counters[fy]||db.company.startNo||1}`;}
+function newDraft(){
+  const d=todayISO();
+  return {id:null,date:d,autoNo:true,no:autoNo(d),prep:hhmm(),rem:hhmm(),reverse:'No',lrNo:'',lrDt:'',truck:'',transporter:'',freight:'To Pay',driver:'',driverMobile:'',through:'',deliveryAt:'',ewayNo:'',ewayDt:'',distance:'',irn:'',ackNo:'',ackDt:'',qr:'',signedQr:'',gstRate:db.company.gstRate||18,supplyTo:'',remark:'',billId:'',shipId:'',lines:[blankLine()]};
+}
+async function editInv(id){
+  const i=db.invoices.find(x=>x.id===id);
+  if(i.irn&&!(await askYes('This invoice already has an IRN. Editing it will make it differ from the registered e-invoice. Continue?')))return;
+  S.draft=JSON.parse(JSON.stringify(i));S.draft.autoNo=false;delete S.draft.totals;delete S.draft.co;delete S.draft.bill;delete S.draft.ship;
+  S.err='';S.view='new';render();
+}
+function dupInv(id){
+  const i=db.invoices.find(x=>x.id===id);const d=newDraft();
+  ['billId','shipId','supplyTo','gstRate','through','transporter','freight','deliveryAt','truck','driver','driverMobile','reverse','remark'].forEach(k=>d[k]=i[k]);
+  d.lines=JSON.parse(JSON.stringify(i.lines));S.draft=d;S.err='';S.view='new';render();
+}
+const F=(l,k,t,ph,cls)=>`<label ${cls?`style="${cls}"`:''}>${l}<input id="f_${k}" type="${t||'text'}" value="${esc(S.draft[k])}" placeholder="${ph||''}" oninput="setD('${k}',this.value)"></label>`;
+function partyOpts(sel,blank){return (blank?`<option value="">${blank}</option>`:'<option value="">Select contact</option>')+db.parties.map(p=>`<option value="${p.id}" ${sel===p.id?'selected':''}>${esc(p.name)}</option>`).join('');}
+function formView(){
+  const d=S.draft,edit=!!d.id;
+  const descs=[...new Set(db.invoices.flatMap(i=>i.lines.map(l=>l.desc)).filter(Boolean))];
+  const bp=db.parties.find(p=>p.id===d.billId);
+  const gp=bp?gstinProblem(bp.gstin):'';
+  return `<h2>${edit?'Edit invoice':'New invoice'}</h2>
+  ${!db.company.name?'<div class="warn">Company details are empty. Fill <a href="#" onclick="go(\'company\');return false">Company setup</a> first, or <button class="btn sm amber" onclick="loadSample()">load sample data</button> to test straight away.</div>':''}
+  ${S.err?`<div class="warn" style="background:#f9e2de;border-color:#e4a79e">${esc(S.err)} ${!db.company.name?'<button class="btn sm amber" onclick="loadSample()">Load sample data</button> <button class="btn sm alt" onclick="go(\'company\')">Open Company setup</button>':''}</div>`:''}
+  <div class="card"><h3>Invoice</h3><div class="grid g4">
+   ${F('Invoice no.','no')}${F('Date','date','date')}${F('Preparation time','prep','time')}${F('Removal time','rem','time')}
+   <label>Reverse charges<select onchange="setD('reverse',this.value)">${['No','Yes'].map(o=>`<option ${d.reverse===o?'selected':''}>${o}</option>`).join('')}</select></label>
+   ${F('GST rate %','gstRate','number')}
+  </div><div class="err" id="noWarn"></div></div>
+
+  <div class="card"><h3>Parties</h3><div class="grid g2">
+   <label>Billed to / place of supply<select onchange="pickBill(this.value)">${partyOpts(d.billId)}</select></label>
+   <label>Shipped to<select onchange="pickShip(this.value)">${partyOpts(d.shipId,'Same as billed to')}</select></label>
+   ${F('Supply to (state code)','supplyTo','text','e.g. 29')}
+   ${F('Through','through')}
+  </div>${gp?`<div class="err" style="margin-top:6px">Billed-to party: ${gp}</div>`:''}
+  ${db.parties.length?'':'<p class="muted">No contacts yet. Add one under <a href="#" onclick="go(\'parties\');return false">Contacts</a>.</p>'}
+  <label style="margin-top:10px">Delivery at (first line is the name, the rest is the address)<textarea id="f_deliveryAt" oninput="setD('deliveryAt',this.value)">${esc(d.deliveryAt)}</textarea></label></div>
+
+  <div class="card"><h3>Transport and e-way bill</h3><div class="grid g4">
+   ${F('L.R. no.','lrNo')}${F('L.R. date','lrDt','date')}${F('Truck no.','truck')}${F('Transporter','transporter')}
+   ${F('Freight type','freight')}${F('Driver name','driver')}${F('Driver mobile','driverMobile')}${F('E-way bill no.','ewayNo')}
+   ${F('E-way bill date','ewayDt','date')}${F('Distance (Km)','distance','number')}
+  </div></div>
+
+  <div class="card"><h3>E-invoice details <span class="muted" style="font-weight:400">(from the IRP portal; leave blank until you have them)</span></h3><div class="grid g4">
+   ${F('IRN','irn')}${F('Ack no.','ackNo')}${F('Ack date','ackDt','date')}
+  </div>
+  <label style="margin-top:10px">Paste the full IRP response (JSON) to fill IRN, Ack no., Ack date and QR in one go<textarea placeholder='{"AckNo":…,"AckDt":"…","Irn":"…","SignedQRCode":"eyJ…"}' onchange="importIRP(this.value)" style="min-height:48px"></textarea></label>
+  <label style="margin-top:10px">Signed QR text (SignedQRCode, starts with eyJ…). The app draws the QR from this, offline.<textarea id="f_signedQr" oninput="setD('signedQr',this.value);qrCheck()" style="min-height:60px;font-family:monospace;font-size:12px">${esc(d.signedQr||'')}</textarea></label>
+  <div id="qrMsg" class="muted" style="font-size:12.5px"></div>
+  <label style="margin-top:10px">Or upload a QR image instead<input type="file" accept="image/*" onchange="upImg(this,'qr',500)"></label>
+  ${d.qr?`<div style="margin-top:8px"><img src="${d.qr}" style="width:70px;height:70px;border:1px solid var(--line)"> <button class="btn sm alt" onclick="S.draft.qr='';render()">Remove QR</button></div>`:''}</div>
+
+  <div class="card"><h3>Goods</h3>
+   <datalist id="dl">${descs.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+   <div class="scroll"><table class="lines" style="min-width:1050px;border-collapse:collapse"><tr><th style="width:150px">Description</th><th style="width:110px">Party ord. no./dt.</th><th style="width:80px">HSN code</th><th style="width:45px">BF</th><th style="width:55px">GSM</th><th style="width:65px">Size</th><th style="width:50px">Size unit</th><th style="width:55px">Reels</th><th style="width:85px">Weight</th><th style="width:55px">Unit</th><th style="width:70px">Rate</th><th style="width:95px;text-align:right">Amount</th><th></th></tr>
+   ${d.lines.map((l,i)=>`<tr>${[['desc','',1],['ord'],['hsn'],['bf'],['gsm'],['size','number'],['sizeUnit'],['reels','number'],['weight','number'],['unit'],['rate','number']].map(([k,t,dl])=>`<td><input ${dl?'list="dl"':''} type="${t||'text'}" ${t==='number'?'step="any"':''} value="${esc(l[k])}" oninput="setL(${i},'${k}',this.value)"></td>`).join('')}<td style="text-align:right;font-variant-numeric:tabular-nums" id="amt_${i}">0.00</td><td><button class="btn sm red" title="Remove line" onclick="delLine(${i})">×</button></td></tr>`).join('')}</table></div>
+   <div class="row" style="margin-top:10px"><button class="btn alt sm" onclick="addLine()">Add line</button><button class="btn alt sm" onclick="addLine(true)">Copy last line</button></div>
+   <div class="totbox" id="tot"></div>
+   <label style="margin-top:10px">Remark<input id="f_remark" value="${esc(d.remark)}" oninput="setD('remark',this.value)"></label></div>
+  <div class="row"><button class="btn amber" onclick="saveInv(true)">Save and open for printing</button><button class="btn" onclick="saveInv(false)">Save</button><button class="btn alt" onclick="${edit?`openInv('${d.id}')`:`go('invoices')`}">Cancel</button></div>`;
+}
+function setD(k,v){
+  const d=S.draft;d[k]=v;
+  if(k==='date'&&d.autoNo){d.no=autoNo(v);$('f_no').value=d.no;}
+  if(k==='no'){d.autoNo=false;noCheck();}
+  if(k==='gstRate'||k==='supplyTo')updateTotals();
+}
+function noCheck(){const e=$('noWarn');if(e)e.textContent=S.draft.no.length>16?'GST rules allow at most 16 characters in an invoice number ('+S.draft.no.length+' now).':'';}
+function setL(i,k,v){S.draft.lines[i][k]=v;updateTotals();}
+function addLine(copy){const d=S.draft;d.lines.push(copy&&d.lines.length?Object.assign({},d.lines[d.lines.length-1]):blankLine());render();}
+function delLine(i){if(S.draft.lines.length>1){S.draft.lines.splice(i,1);render();}}
+function updateTotals(){
+  const t=calc(S.draft);if(typeof qrCheck==='function'&&S.draft.signedQr)qrCheck();
+  t.lines.forEach((l,i)=>{const e=$('amt_'+i);if(e)e.textContent=inr(l.amount);});
+  const e=$('tot');if(!e)return;
+  e.innerHTML=`<div><span>Taxable value</span><span>${inr(t.taxable)}</span></div>`+
+   (t.intra?`<div><span>CGST ${t.rate/2}%</span><span>${inr(t.cgst)}</span></div><div><span>SGST ${t.rate/2}%</span><span>${inr(t.sgst)}</span></div>`:`<div><span>IGST ${t.rate}%</span><span>${inr(t.igst)}</span></div>`)+
+   `<div><span>Round off</span><span>${t.roundOff.toFixed(2)}</span></div><div class="g"><span>Total</span><span>₹ ${inr(t.total)}</span></div>`+
+   `<div class="muted" style="font-size:12px">${t.reels} reels · ${t.weight.toFixed(3)} KGS · ${t.intra?'CGST + SGST (same state)':(S.draft.supplyTo?'IGST (other state)':'Select a contact to set place of supply')}</div>`;
+}
+function pickBill(id){
+  const p=db.parties.find(x=>x.id===id);S.draft.billId=id;
+  if(p)S.draft.supplyTo=p.stateCode;
+  if(!S.draft.shipId)autoDeliver(p);
+  render();
+}
+function pickShip(id){S.draft.shipId=id;const p=db.parties.find(x=>x.id===(id||S.draft.billId));S.draft.deliveryAt='';autoDeliver(p);render();}
+function autoDeliver(p){if(p&&!S.draft.deliveryAt)S.draft.deliveryAt=p.name+'\n'+(p.address||'').replace(/\n/g,' ');}
+function upImg(inp,key,max){const f=inp.files[0];if(!f)return;imgToData(f,max).then(u=>{S.draft[key]=u;render();}).catch(()=>toast('Could not read that image'));}
+function imgToData(file,max){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/png'));};im.onerror=rej;im.src=fr.result;};fr.onerror=rej;fr.readAsDataURL(file);});}
+
+function saveInv(open){
+  const d=S.draft,co=db.company;
+  const bill=db.parties.find(p=>p.id===d.billId);
+  if(!co.name||!co.stateCode){S.err='Fill the company name and state code in Company setup first.';return render();}
+  if(!bill){S.err='Choose the billed-to contact.';return render();}
+  if(!String(d.supplyTo).trim()){S.err='Enter the supply-to state code.';return render();}
+  if(!d.no.trim()){S.err='Enter an invoice number.';return render();}
+  const lines=d.lines.filter(l=>l.desc||num(l.weight)||num(l.rate));
+  if(!lines.length||lines.some(l=>!num(l.weight)||!num(l.rate))){S.err='Each line needs a weight and a rate.';return render();}
+  if(db.invoices.some(i=>i.no===d.no.trim()&&i.id!==d.id)){S.err='Invoice number '+d.no+' already exists.';return render();}
+  const ship=db.parties.find(p=>p.id===d.shipId)||bill;
+  const rec=JSON.parse(JSON.stringify(d));
+  rec.no=d.no.trim();rec.lines=lines;rec.bill=JSON.parse(JSON.stringify(bill));rec.ship=JSON.parse(JSON.stringify(ship));
+  rec.co=JSON.parse(JSON.stringify(co));delete rec.co.logo;rec.co.logo=co.logo;delete rec.autoNo;
+  rec.totals=calc(rec);delete rec.totals.lines;
+  if(!rec.deliveryAt)rec.deliveryAt=ship.name+'\n'+(ship.address||'').replace(/\n/g,' ');
+  if(d.id){const i=db.invoices.findIndex(x=>x.id===d.id);rec.status=db.invoices[i].status;rec.createdAt=db.invoices[i].createdAt;db.invoices[i]=rec;log('Edited invoice',rec.no);}
+  else{rec.id=uid();rec.status='active';rec.createdAt=Date.now();db.invoices.push(rec);log('Created invoice',rec.no);}
+  const m=rec.no.match(/^(.*)\/(\d\d-\d\d)\/(\d+)$/);
+  if(m){const n=+m[3]+1;if(n>(db.counters[m[2]]||0))db.counters[m[2]]=n;}
+  save();toast('Invoice saved');
+  if(open){S.viewId=rec.id;S.view='view';}else S.view='invoices';
+  render();window.scrollTo(0,0);
+}
+
+
+/* =================== e-invoice QR =================== */
+function qrSvg(text){
+  try{
+    let q;
+    for(const ec of ['M','L']){try{q=qrcode(0,ec);q.addData(text,'Byte');q.make();break;}catch(e){q=null;}}
+    if(!q)return '';
+    const n=q.getModuleCount(),m=2;let d='';
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))d+=`M${c+m},${r+m}h1v1h-1z`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n+2*m} ${n+2*m}" shape-rendering="crispEdges" style="width:34mm;height:34mm"><rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  }catch(e){return '';}
+}
+function jwtPayload(t){
+  try{
+    const part=String(t).trim().split('.')[1];if(!part)return null;
+    const b=part.replace(/-/g,'+').replace(/_/g,'/');
+    const o=JSON.parse(decodeURIComponent(escape(atob(b+'='.repeat((4-b.length%4)%4)))));
+    return typeof o.data==='string'?JSON.parse(o.data):(o.data||o);
+  }catch(e){return null;}
+}
+function qrCheck(){
+  const d=S.draft,e=$('qrMsg');if(!e)return;
+  const t=(d.signedQr||'').trim();
+  if(!t){e.className='muted';e.textContent='Paste the SignedQRCode text from the IRP to print the QR on the invoice.';return;}
+  const p=jwtPayload(t);
+  if(!p){e.className='err';e.textContent='This does not look like the signed QR text from the IRP (it should start with eyJ and contain two dots).';return;}
+  const bad=[];
+  if(p.DocNo&&p.DocNo!==d.no.trim())bad.push('invoice number is '+p.DocNo);
+  const tot=calc(d).total;
+  if(p.TotInvVal!=null&&Math.abs(num(p.TotInvVal)-tot)>1)bad.push('invoice value is '+p.TotInvVal);
+  e.className=bad.length?'err':'muted';
+  e.textContent=bad.length?'QR does not match this invoice: '+bad.join(', ')+'.':'QR text read OK'+(p.Irn?' · IRN '+String(p.Irn).slice(0,12)+'…':'')+(p.DocNo?' · '+p.DocNo:'');
+  if(!bad.length&&p.Irn&&!d.irn){d.irn=p.Irn;const f=$('f_irn');if(f)f.value=p.Irn;}
+}
+
+function autoQrText(inv){
+  const t=calc(inv),top=t.lines.slice().sort((a,b)=>b.amount-a.amount)[0]||{};
+  const o={SellerGstin:inv.co.gstin,BuyerGstin:inv.bill.gstin||'',DocNo:inv.no,DocTyp:'INV',DocDt:dmy(inv.date).split('/').length?inv.date.split('-').reverse().join('/'):'',TotInvVal:t.total,ItemCnt:t.lines.length,MainHsnCode:String(top.hsn||'')};
+  if(inv.irn)o.Irn=inv.irn;
+  return JSON.stringify(o);
+}
+function invQr(inv){
+  if(inv.signedQr&&jwtPayload(inv.signedQr))return qrSvg(inv.signedQr);
+  if(inv.qr)return `<img src="${inv.qr}" alt="">`;
+  return qrSvg(autoQrText(inv));
+}
+function importIRP(txt){
+  let o;try{o=JSON.parse(txt);}catch(e){toast('That is not valid JSON');return;}
+  const find=(x,k)=>{if(x&&typeof x==='object'){if(k in x)return x[k];for(const v of Object.values(x)){const r=find(v,k);if(r!=null)return r;}}return null;};
+  const d=S.draft;let n=0;
+  const irn=find(o,'Irn'),ack=find(o,'AckNo'),dt=find(o,'AckDt'),qr=find(o,'SignedQRCode');
+  if(irn){d.irn=irn;n++;}if(ack){d.ackNo=String(ack);n++;}
+  if(dt){d.ackDt=String(dt).slice(0,10);n++;}
+  if(qr){d.signedQr=qr;n++;}
+  if(!n){toast('No IRN, Ack or SignedQRCode found in that text');return;}
+  toast('Filled '+n+' e-invoice fields');render();
+}
+
+
+
+/* =================== e-invoice JSON for the IRP (schema 1.1) =================== */
+const addrFull=x=>String(x||'').replace(/^\s*works\s*:\s*/i,'').replace(/\s*\n\s*/g,', ').replace(/[\s,-]+$/,'').trim();
+function addrParts(x){const a=addrFull(x);if(a.length<=100)return {Addr1:a};let k=a.lastIndexOf(' ',100);if(k<40)k=100;return {Addr1:a.slice(0,k).replace(/[\s,]+$/,''),Addr2:a.slice(k).trim().slice(0,100)};}
+function irpProblems(inv){
+  const c=inv.co,b=inv.bill,s=inv.ship||inv.bill,pr=[];
+  const chk=(who,x,needG)=>{
+    if(needG&&!x.gstin)pr.push(who+': GSTIN is required for e-invoicing');
+    else if(x.gstin){const g=gstinProblem(x.gstin);if(g)pr.push(who+': '+g);}
+    if(!/^\d{6}$/.test(String(x.pin||'').trim()))pr.push(who+': pincode must be 6 digits');
+    if(String(x.loc||'').trim().length<3)pr.push(who+': city / location is required (3+ letters)');
+    if(!String(x.address||x.works||'').trim())pr.push(who+': address is empty');
+  };
+  chk('Your company',c,true);chk('Billed-to '+b.name,b,true);
+  if(inv.shipId&&inv.shipId!==inv.billId)chk('Shipped-to '+s.name,s,true);
+  if(!/^[A-Za-z1-9][A-Za-z0-9\/-]{0,15}$/.test(inv.no))pr.push('Invoice number must be up to 16 letters, digits, / or -, and not start with 0, / or -');
+  inv.lines.forEach((l,i)=>{if(!String(l.hsn).trim())pr.push('Line '+(i+1)+': HSN code is missing');if(!String(l.desc).trim())pr.push('Line '+(i+1)+': description is missing');});
+  return pr;
+}
+function buildIRP(inv){
+  const c=inv.co,b=inv.bill,s=inv.ship||inv.bill,t=calc(inv);
+  const dt=x=>x?x.split('-').reverse().join('/'):'';
+  const party=(x,addrSrc,pos)=>Object.assign({Gstin:String(x.gstin).trim().toUpperCase(),LglNm:x.name},pos?{Pos:String(pos).padStart(2,'0')}:{},addrParts(addrSrc),{Loc:String(x.loc).trim(),Pin:parseInt(x.pin,10),Stcd:String(x.stateCode).padStart(2,'0')});
+  const o={Version:'1.1',
+    TranDtls:{TaxSch:'GST',SupTyp:'B2B',RegRev:inv.reverse==='Yes'?'Y':'N',IgstOnIntra:'N'},
+    DocDtls:{Typ:'INV',No:inv.no,Dt:dt(inv.date)},
+    SellerDtls:party(c,c.works),
+    BuyerDtls:party(b,b.address,inv.supplyTo)};
+  if(inv.shipId&&inv.shipId!==inv.billId){const sp=party(s,s.address);o.ShipDtls=Object.assign({Gstin:sp.Gstin,LglNm:sp.LglNm,Addr1:sp.Addr1},sp.Addr2?{Addr2:sp.Addr2}:{},{Loc:sp.Loc,Pin:sp.Pin,Stcd:sp.Stcd});}
+  o.ItemList=t.lines.map((l,i)=>({SlNo:String(i+1),PrdDesc:l.desc,IsServc:'N',HsnCd:String(l.hsn).trim(),Qty:+num(l.weight).toFixed(3),Unit:(l.unit||'KGS').toUpperCase().trim(),UnitPrice:+num(l.rate).toFixed(3),TotAmt:l.amount,AssAmt:l.amount,GstRt:t.rate,IgstAmt:l.igst,CgstAmt:l.cgst,SgstAmt:l.sgst,TotItemVal:round2(l.amount+l.cgst+l.sgst+l.igst)}));
+  o.ValDtls={AssVal:t.taxable,CgstVal:t.cgst,SgstVal:t.sgst,IgstVal:t.igst,RndOffAmt:t.roundOff,TotInvVal:t.total};
+  return o;
+}
+async function downloadIRP(id){
+  const inv=db.invoices.find(x=>x.id===id),pr=irpProblems(inv);
+  if(pr.length){await dialog('Fix these before exporting the e-invoice JSON:\n\n- '+pr.join('\n- ')+'\n\nAdd pincode and city under Contacts and Company setup.',{cancel:false});return;}
+  download('einvoice-'+inv.no.replace(/[\\/:*?"<>|]/g,'-')+'.json',JSON.stringify([buildIRP(inv)],null,2),'application/json');
+  log('e-invoice JSON exported',inv.no);save();toast('e-invoice JSON downloaded');
+}
+
+/* =================== direct PDF download (no print dialog needed) =================== */
+function makePDF(jpeg,iw,ih){
+  const PW=595.28,PH=841.89,M=17;
+  let w=PW-2*M,h=w*ih/iw;if(h>PH-2*M){h=PH-2*M;w=h*iw/ih;}
+  const x=M,y=PH-M-h,enc=t=>new TextEncoder().encode(t);
+  const parts=[],offs=[];let len=0;
+  const push=b=>{parts.push(b);len+=b.length;};
+  const obj=(n,body)=>{offs[n]=len;push(enc(n+' 0 obj\n'+body+'\nendobj\n'));};
+  push(enc('%PDF-1.4\n'));
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+PW+' '+PH+'] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+  offs[4]=len;
+  push(enc('4 0 obj\n<< /Type /XObject /Subtype /Image /Width '+iw+' /Height '+ih+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+jpeg.length+' >>\nstream\n'));
+  push(jpeg);push(enc('\nendstream\nendobj\n'));
+  const cs='q '+w.toFixed(2)+' 0 0 '+h.toFixed(2)+' '+x+' '+y.toFixed(2)+' cm /Im0 Do Q';
+  obj(5,'<< /Length '+cs.length+' >>\nstream\n'+cs+'\nendstream');
+  const xref=len;let t='xref\n0 6\n0000000000 65535 f \n';
+  for(let i=1;i<=5;i++)t+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+  push(enc(t+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF'));
+  return new Blob(parts,{type:'application/pdf'});
+}
+async function downloadPDF(name){
+  const el=document.querySelector('.inv');if(!el)return;
+  try{
+    toast('Making PDF…');
+    const r=el.getBoundingClientRect(),W=Math.ceil(r.width),H=Math.ceil(r.height);
+    const css=[...document.querySelectorAll('style')].map(x=>x.textContent).join('\n');
+    const xml=new XMLSerializer().serializeToString(el);
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:'+W+'px;background:#fff"><style>'+css.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</style>'+xml+'</div></foreignObject></svg>';
+    const img=new Image();
+    await new Promise((ok,no)=>{img.onload=ok;img.onerror=no;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);});
+    const k=3,c=document.createElement('canvas');c.width=W*k;c.height=H*k;
+    const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    const b64=c.toDataURL('image/jpeg',0.93).split(',')[1],bin=atob(b64),u=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+    download(name.replace(/[\\/:*?"<>|]/g,'-')+'.pdf',makePDF(u,c.width,c.height),'application/pdf');
+    toast('PDF ready');
+  }catch(e){console.error(e);toast('Could not make the PDF in this browser. Use Print instead, or open the file in Chrome or Edge.');}
+}
+function framed(){if(PUBLISHED)return false;try{return window.self!==window.top;}catch(e){return true;}}
+
+/* =================== invoice view / print =================== */
+function viewView(){
+  const i=db.invoices.find(x=>x.id===S.viewId);if(!i)return '<p>Invoice not found.</p>';
+  const missing=db.company.einv&&i.status!=='cancelled'&&(!i.irn||(!i.signedQr&&!i.qr));
+  return `${missing?`<div class="warn noprint"><b>This invoice has no ${!i.irn?'IRN':'QR code'} yet.</b> E-invoices must carry the IRN and QR code from the IRP portal. Open <b>Edit</b>, then paste the IRP response or the SignedQRCode text and save.</div>`:''}${framed()?`<div class="warn noprint"><b>You are viewing this inside a preview window.</b> Browsers often block printing, downloads and saving there. Download the file, then open it from your computer in Chrome or Edge.</div>`:''}<div class="toolbar noprint">
+    <button class="btn amber" onclick="downloadPDF('Invoice-${esc(i.no)}')">Download PDF</button>
+    ${PUBLISHED?'':'<button class="btn" onclick="window.print()">Print</button>'}
+    ${i.status!=='cancelled'?`<button class="btn alt" onclick="downloadIRP('${i.id}')">e-invoice JSON</button>`:''}
+    <button class="btn alt" onclick="go('invoices')">Back to list</button>
+    ${i.status!=='cancelled'?`<button class="btn alt" onclick="editInv('${i.id}')">Edit</button><button class="btn alt" onclick="payFor('${i.id}')">Record payment</button>`:''}
+    <button class="btn alt" onclick="dupInv('${i.id}')">Copy as new</button>
+    ${i.status!=='cancelled'?`<button class="btn red" onclick="cancelInv('${i.id}')">Cancel invoice</button>`:'<span class="chip can">Cancelled</span>'}
+  </div>
+  <div class="paper">${renderInvoice(i)}</div>`;
+}
+async function cancelInv(id){
+  const i=db.invoices.find(x=>x.id===id);
+  if(!(await askYes('Cancel invoice '+i.no+'? It stays on record (numbers cannot be reused) but is excluded from totals. If it has an IRN, also cancel it on the IRP portal within the allowed time.','Cancel invoice')))return;
+  i.status='cancelled';log('Cancelled invoice',i.no);save();render();
+}
+function payFor(id){const i=db.invoices.find(x=>x.id===id);S.pay=newPay();S.pay.partyId=i.billId;S.pay.invoiceId=id;S.pay.amount=String(Math.max(0,balOf(i)));S.view='payments';render();}
+
+function renderInvoice(inv){
+  const c=inv.co,b=inv.bill,s=inv.ship||inv.bill,t=calc(inv);
+  const T=(l,v)=>`<div class="rg"><span>${l}</span><span>:</span><span class="v">${v==null?'':esc(v)}</span></div>`;
+  const da=(inv.deliveryAt||'').split('\n'),dfirst=da[0],drest=da.slice(1).join('\n');
+  const n=t.lines.length,fill=Math.max(4,30-n*3.4);
+  const rows=t.lines.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.desc)}</td><td class="c">${esc(l.ord)}</td><td class="c">${esc(l.hsn)}</td><td class="c">${esc(l.bf)}</td><td class="c">${esc(l.gsm)}</td><td class="r">${fmt2(l.size)}</td><td class="c">${esc(l.sizeUnit)}</td><td class="c">${esc(l.reels)}</td><td class="r">${fmt3(l.weight)}</td><td class="c">${esc(l.unit)}</td><td class="r">${fmt2(l.rate)}</td><td class="r">${fmt2(l.amount)}</td></tr>`).join('');
+  const colw=[3.5,17,13,8,4,5,7,5,6,9.5,5,6.5,10.5];
+  const txRows=`<div class="tx"><span>Taxable GST</span><span class="m">-&nbsp;&nbsp;&nbsp;:</span><span class="a">${fmt2(t.taxable)}</span></div>`+
+    (t.intra?`<div class="tx"><span>CGST</span><span class="m">${t.rate/2===Math.round(t.rate/2)?(t.rate/2).toFixed(2):(t.rate/2)} % :</span><span class="a">${fmt2(t.cgst)}</span></div><div class="tx"><span>SGST</span><span class="m">${(t.rate/2).toFixed(2)} % :</span><span class="a">${fmt2(t.sgst)}</span></div>`
+    :`<div class="tx"><span>IGST</span><span class="m">${t.rate.toFixed(2)} % :</span><span class="a">${fmt2(t.igst)}</span></div>`)+
+    `<div class="tx"><span>Round Off</span><span class="m">-&nbsp;&nbsp;&nbsp;:</span><span class="a">${Math.abs(t.roundOff)<0.005?'0.00':t.roundOff.toFixed(2)}</span></div>`;
+  const coLines=(c.works||'').split('\n').map(esc).join('<br>');
+  const extra=(c.extra||'').split('\n').filter(Boolean).map(x=>`<div><b>${esc(x)}</b></div>`).join('');
+  const kv=(k,v,w)=>`<span class="${w||'k'}">${k}</span>: ${esc(v)}`;
+  return `<div class="inv">
+  <div class="hdr">
+    <div class="lg">${c.logo?`<img src="${c.logo}" alt="">`:''}</div>
+    <div class="co"><div class="nm">${esc(c.name)}</div><div>${coLines}</div>
+      <div class="em">${c.email?`<div><b>Email :</b> ${esc(c.email)}</div>`:''}</div>
+      <div><b>State : ${esc(c.state)} , State Code : ${esc(c.stateCode)}</b></div>
+      <div><b>GSTIN No. : ${esc(c.gstin)}</b></div>
+      ${c.cin?`<div><b>CIN No. : ${esc(c.cin)}</b></div>`:''}
+      ${c.pan?`<div><b>PAN : ${esc(c.pan)}</b></div>`:''}
+      ${extra}</div>
+    <div class="qr">${invQr(inv)}</div>
+  </div>
+  <div class="ttl"><b>TAX INVOICE</b><small>(As per rule 46 and section 31 of GST Act-2017)</small></div>
+  <div class="irn"><span><b>IRN No.</b> ${esc(inv.irn)}</span><span style="white-space:nowrap"><b>Ack No. :</b> ${esc(inv.ackNo)} <b>Ack Dt. :</b> ${dmy(inv.ackDt,true)}</span></div>
+  <div class="mid">
+    <div class="ml">
+      <div class="u">Details of Receiver (Billed To) / Place of Supply :</div>
+      <div class="nm2">${esc(b.name)}</div>
+      <div class="pre">${esc(b.address)}</div><div>${esc(b.cityLine)}</div>
+      <div class="kv2" style="margin-top:3.2mm"><div>${kv('GSTIN No.',b.gstin)}</div><div>${kv('Contact No.',b.contact,'k2')}</div></div>
+      <div class="kv2"><div>${kv('State Code',inv.supplyTo===''?b.stateCode:b.stateCode)}</div><div>${kv('Supply To',inv.supplyTo,'k2')}</div></div>
+      <div>${kv('PAN NO',b.pan)}</div>
+      <div class="u" style="margin-top:1.4mm">Shipped to Party :</div>
+      <div class="nm2">${esc(s.name)}</div>
+      <div class="pre">${esc(s.address)}</div><div>${esc(s.cityLine)}</div>
+      <div class="kv2" style="margin-top:1.4mm"><div>${kv('GSTIN No.',s.gstin)}</div><div>${kv('Contact No.',s.contact,'k2')}</div></div>
+      <div class="kv2"><div>${kv('State Code',s.stateCode)}</div><div>${kv('State',s.stateName,'k2')}</div></div>
+      <div>${kv('PAN NO',s.pan)}</div>
+      <div class="through"><b>Through</b> &nbsp;: ${esc(inv.through)}</div>
+    </div>
+    <div class="mr">
+      <div class="rg in"><span>Invoice No.</span><span>:</span><span class="v">${esc(inv.no)}</span></div>
+      ${T('Date',dmy(inv.date))}${T('Preparation Time',inv.prep)}${T('Removal Time',inv.rem)}${T('Reverse Charges',inv.reverse)}
+      ${T('L.R No.',inv.lrNo)}${T('L.R Dt.',dmy(inv.lrDt))}${T('Truck No.',inv.truck)}${T('Transporter',inv.transporter)}
+      ${T('Freight Type',inv.freight)}${T('Driver Name',inv.driver)}${T('Driver Mobile',inv.driverMobile)}
+      <div class="rg"><span>Delivery At</span><span>:</span><span class="v">${esc(dfirst)}</span></div>
+      <div class="rd pre">${esc(drest)}</div>
+    </div>
+  </div>
+  <div class="eway"><span>E-Way Bill No. &nbsp;: ${esc(inv.ewayNo)}</span><span>E-Way Bill Dt. &nbsp;: ${dmy(inv.ewayDt)}</span><span>Distance &nbsp;: ${inv.distance!==''&&inv.distance!=null?fmt2(inv.distance)+' Km':''}</span></div>
+  <table class="it"><colgroup>${colw.map(w=>`<col style="width:${w}%">`).join('')}</colgroup>
+   <thead><tr><th>S.<br>No.</th><th>Description Of Goods</th><th>Party Ord. No./DT.</th><th>HSN<br>CODE</th><th>BF</th><th>GSM</th><th>Size</th><th>Size<br>Unit</th><th>Reels</th><th>Weight</th><th>Unit</th><th>Rate</th><th>Amount<br>(Rs.)</th></tr></thead>
+   <tbody>${rows}<tr style="height:${fill}mm">${'<td></td>'.repeat(13)}</tr></tbody>
+   <tfoot><tr><td colspan="8" style="text-align:right">Total</td><td style="text-align:center">${t.reels}</td><td style="text-align:right">${fmt3(t.weight)}</td><td style="text-align:center">KGS</td><td></td><td style="text-align:right">${fmt2(t.taxable)}</td></tr></tfoot></table>
+  <div class="bot">
+    <div class="bl"><div class="u">Declaration :</div><div>${esc(c.declaration)}</div>
+      <div class="words"><b><div>IGST : Indian Rupees ${moneyWords(t.igst)}Only</div><div>CGST : Indian Rupees ${moneyWords(t.cgst)}Only</div></b></div></div>
+    <div class="br">${txRows}</div>
+  </div>
+  <div class="rt"><div class="rl"><b>Remark :</b> ${esc(inv.remark)}</div><div class="rr"><b>Total...................</b><span class="rs">₹</span><b class="tot">${fmt2(t.total)}</b></div></div>
+  <div class="twrow"><div class="tw">Total Invoice Value : Indian Rupees ${moneyWords(t.total)}Only</div></div>
+  <div class="tc">
+    <div class="tcl"><div class="u">Terms &amp; Conditions :</div><div class="pre">${esc(c.terms)}</div></div>
+    <div class="tcr"><div class="cert">Certified that the particulars given above are true and correct</div><div class="for">For ${esc(c.name.replace(/\s*\(.*\)\s*$/,''))}</div><div class="sig">Authorized Signatory</div></div>
+  </div>
+  ${c.bank?`<div class="bank">${esc(c.bank)}</div>`:''}
+  </div>`;
+}
+
+/* =================== contacts =================== */
+function blankParty(){return {id:'',name:'',address:'',cityLine:'',stateName:'',stateCode:'',gstin:'',pan:'',contact:'',opening:'',loc:'',pin:''};}
+function partiesView(){
+  const p=S.party;
+  const form=p?`<div class="card"><h3>${p.id?'Edit contact':'New contact'}</h3><div class="grid g2">
+    ${PF('Name','name')}${PF('GSTIN','gstin','text','29ABCDE1234F1Z5')}
+    <label>Address<textarea oninput="S.party.address=this.value">${esc(p.address)}</textarea></label>
+    ${PF('City line (printed under the address)','cityLine','text','BANGALORE (Karnataka)-560073')}
+    ${PF('City / location (for e-invoice)','loc')}${PF('Pincode','pin')}${PF('State','stateName')}${PF('State code','stateCode')}${PF('PAN','pan')}${PF('Contact no.','contact')}${PF('Opening balance (₹, they owe you)','opening','number')}
+   </div><div class="err" id="gerr" style="margin-top:6px"></div>
+   <div class="row" style="margin-top:10px"><button class="btn" onclick="saveParty()">Save contact</button><button class="btn alt" onclick="S.party=null;render()">Cancel</button></div></div>`:'';
+  return `<h2>Contacts</h2><div class="toolbar"><button class="btn" onclick="S.party=blankParty();render()">Add contact</button></div>${form}
+  <div class="card">${db.parties.length?`<div class="scroll"><table class="t"><tr><th>Name</th><th>GSTIN</th><th>State</th><th>Contact</th><th class="n">Balance</th><th></th></tr>${db.parties.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(x=>`<tr><td><b>${esc(x.name)}</b></td><td>${esc(x.gstin)}</td><td>${esc(x.stateName)} ${esc(x.stateCode)}</td><td>${esc(x.contact)}</td><td class="n">${inr(partyBal(x.id))}</td><td style="white-space:nowrap"><button class="btn sm alt" onclick="S.party=JSON.parse(JSON.stringify(db.parties.find(p=>p.id==='${x.id}')));render()">Edit</button> <button class="btn sm alt" onclick="ledger('${x.id}')">Ledger</button></td></tr>`).join('')}</table></div>`:'<p class="muted">No contacts yet. Add your first customer.</p>'}</div>
+  <div id="ledger"></div>`;
+}
+const PF=(l,k,t,ph)=>`<label>${l}<input type="${t||'text'}" value="${esc(S.party[k])}" placeholder="${ph||''}" oninput="setP('${k}',this.value)"></label>`;
+function setP(k,v){
+  S.party[k]=v;
+  if(k==='gstin'){const g=v.trim().toUpperCase();$('gerr').textContent=gstinProblem(g);if(/^\d{2}/.test(g)&&!S.party.stateCode){S.party.stateCode=g.slice(0,2);render();}
+    if(/^\d{10}/.test(g.slice(2))||g.length>=12){const pn=g.slice(2,12);if(/^[A-Z]{5}\d{4}[A-Z]$/.test(pn)&&!S.party.pan){S.party.pan=pn;}}}
+}
+function saveParty(){
+  const p=S.party;if(!p.name.trim()){toast('Enter a name');return;}
+  p.gstin=p.gstin.trim().toUpperCase();
+  if(p.id){const i=db.parties.findIndex(x=>x.id===p.id);db.parties[i]=p;log('Edited contact',p.name);}else{p.id=uid();db.parties.push(p);log('Added contact',p.name);}
+  save();S.party=null;toast('Contact saved');render();
+}
+function ledger(pid){
+  const p=db.parties.find(x=>x.id===pid);
+  const ev=[];
+  db.invoices.filter(i=>i.billId===pid&&i.status!=='cancelled').forEach(i=>ev.push({d:i.date,t:'Invoice '+i.no,dr:i.totals.total,cr:0}));
+  db.payments.filter(x=>x.partyId===pid).forEach(x=>ev.push({d:x.date,t:'Payment ('+x.mode+(x.ref?' '+x.ref:'')+')',dr:0,cr:num(x.amount)}));
+  ev.sort((a,b)=>a.d.localeCompare(b.d));
+  let bal=num(p.opening);
+  $('ledger').innerHTML=`<div class="card"><h3>Ledger: ${esc(p.name)}</h3><div class="scroll"><table class="t"><tr><th>Date</th><th>Details</th><th class="n">Debit</th><th class="n">Credit</th><th class="n">Balance</th></tr>
+  <tr><td></td><td>Opening balance</td><td></td><td></td><td class="n">${inr(bal)}</td></tr>
+  ${ev.map(e=>{bal=round2(bal+e.dr-e.cr);return `<tr><td>${dmy(e.d)}</td><td>${esc(e.t)}</td><td class="n">${e.dr?inr(e.dr):''}</td><td class="n">${e.cr?inr(e.cr):''}</td><td class="n">${inr(bal)}</td></tr>`;}).join('')}</table></div></div>`;
+  $('ledger').scrollIntoView({behavior:'smooth'});
+}
+
+/* =================== payments =================== */
+function newPay(){return {partyId:'',invoiceId:'',date:todayISO(),amount:'',mode:'Bank transfer',ref:''};}
+function paymentsView(){
+  const p=S.pay;
+  const invs=db.invoices.filter(i=>i.billId===p.partyId&&i.status!=='cancelled'&&balOf(i)>0);
+  const list=db.payments.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return `<h2>Payments</h2><div class="card"><h3>Record a receipt</h3><div class="grid g4">
+   <label>Customer<select onchange="S.pay.partyId=this.value;S.pay.invoiceId='';render()">${partyOpts(p.partyId)}</select></label>
+   <label>Against invoice<select onchange="pickPayInv(this.value)"><option value="">On account (advance)</option>${invs.map(i=>`<option value="${i.id}" ${p.invoiceId===i.id?'selected':''}>${esc(i.no)} · due ${inr(balOf(i))}</option>`).join('')}</select></label>
+   <label>Date<input type="date" value="${p.date}" oninput="S.pay.date=this.value"></label>
+   <label>Amount (₹)<input id="pamt" type="number" step="any" value="${esc(p.amount)}" oninput="S.pay.amount=this.value"></label>
+   <label>Mode<select onchange="S.pay.mode=this.value">${['Bank transfer','UPI','Cheque','Cash','Other'].map(m=>`<option ${p.mode===m?'selected':''}>${m}</option>`).join('')}</select></label>
+   <label>Reference no.<input value="${esc(p.ref)}" oninput="S.pay.ref=this.value"></label>
+  </div><div class="row" style="margin-top:12px"><button class="btn" onclick="savePay()">Save payment</button></div></div>
+  <div class="card">${list.length?`<div class="scroll"><table class="t"><tr><th>Date</th><th>Customer</th><th>Invoice</th><th>Mode</th><th>Reference</th><th class="n">Amount</th><th></th></tr>${list.map(x=>{const pa=db.parties.find(q=>q.id===x.partyId),iv=db.invoices.find(q=>q.id===x.invoiceId);return `<tr><td>${dmy(x.date)}</td><td>${esc(pa?pa.name:'')}</td><td>${iv?esc(iv.no):'<span class="muted">On account</span>'}</td><td>${esc(x.mode)}</td><td>${esc(x.ref)}</td><td class="n">${inr(x.amount)}</td><td><button class="btn sm red" onclick="delPay('${x.id}')">Delete</button></td></tr>`;}).join('')}</table></div>`:'<p class="muted">No payments recorded.</p>'}</div>`;
+}
+function pickPayInv(id){S.pay.invoiceId=id;const i=db.invoices.find(x=>x.id===id);if(i)S.pay.amount=String(balOf(i));render();}
+function savePay(){
+  const p=S.pay;if(!p.partyId)return toast('Choose a customer');if(num(p.amount)<=0)return toast('Enter an amount');
+  db.payments.push({id:uid(),partyId:p.partyId,invoiceId:p.invoiceId,date:p.date,amount:round2(num(p.amount)),mode:p.mode,ref:p.ref});
+  log('Payment recorded',p.amount);save();S.pay=newPay();toast('Payment saved');render();
+}
+async function delPay(id){if(!(await askYes('Delete this payment entry?','Delete')))return;db.payments=db.payments.filter(x=>x.id!==id);log('Payment deleted',id);save();render();}
+
+/* =================== company =================== */
+function companyView(){
+  const c=db.company;
+  const C=(l,k,t,ph)=>`<label>${l}<input type="${t||'text'}" value="${esc(c[k])}" placeholder="${ph||''}" oninput="setC('${k}',this.value)"></label>`;
+  const A=(l,k,rows)=>`<label>${l}<textarea style="min-height:${rows||70}px" oninput="setC('${k}',this.value)">${esc(c[k])}</textarea></label>`;
+  return `<h2>Company setup</h2>
+  ${!c.name?'<div class="warn">Fill in at least the company name and state code (and state), then click Save company details at the bottom. Or <button class="btn sm amber" onclick="loadSample()">load sample data</button> to test with the Jodhani example.</div>':''}
+  <div class="card"><h3>Header details</h3><div class="grid g2">
+   ${C('Company name','name')}${C('Email','email')}
+   ${A('Works / address','works')}
+   <div class="grid">${C('State','state','text','Karnataka')}${C('State code','stateCode','text','29')}</div>
+   ${C('City / location (for e-invoice)','loc','text','Tumkur')}${C('Pincode','pin','text','572128')}
+   ${C('GSTIN','gstin')}${C('CIN (printed as given)','cin','text','CIN:U21019KA1992PTC038321')}${C('PAN','pan')}
+   ${A('Extra header lines (printed in bold, one per line)','extra',60)}
+   <label>Logo (printed top-left)<input type="file" accept="image/*" onchange="upLogo(this)"></label>
+  </div>${c.logo?`<div style="margin-top:8px"><img src="${c.logo}" style="max-height:70px;border:1px solid var(--line)"> <button class="btn sm alt" onclick="setC('logo','');render()">Remove logo</button></div>`:''}</div>
+  <div class="card"><h3>Numbering and tax</h3><div class="grid g4">
+   ${C('Invoice prefix','prefix')}${C('Starting number for a new financial year','startNo','number')}${C('Default GST rate %','gstRate','number')}
+   <label>E-invoicing applies to me<select onchange="setC('einv',this.value==='1')"><option value="0">No</option><option value="1" ${c.einv?'selected':''}>Yes (show IRN pending)</option></select></label>
+  </div><p class="muted" style="margin:8px 0 0">Invoice numbers look like <b>${esc(c.prefix||'INV')}/${fyOf(todayISO())}/${db.counters[fyOf(todayISO())]||c.startNo||1}</b> and restart each financial year (April to March).</p></div>
+  <div class="card"><h3>Footer</h3><div class="grid g2">
+   ${A('Declaration','declaration',110)}${A('Terms and conditions (printed exactly as typed, one per line)','terms',160)}
+   ${C('Bank line (printed at the bottom)','bank','text','Bank : KOTAK MAHINDRA BANK, A/C No.…, IFSC Code:…')}
+  </div></div>
+  <div class="row"><button class="btn" onclick="saveCompany()">Save company details</button><span class="muted">Past invoices keep the details they were issued with.</span></div>`;
+}
+function setC(k,v){db.company[k]=v;}
+function saveCompany(){log('Company details updated');save();toast('Company details saved');render();}
+function upLogo(inp){const f=inp.files[0];if(!f)return;imgToData(f,500).then(u=>{db.company.logo=u;save();render();}).catch(()=>toast('Could not read that image'));}
+
+/* =================== backup =================== */
+function backupView(){
+  const size=(JSON.stringify(db).length/1024).toFixed(0);
+  return `<h2>Backup and restore</h2>
+  ${storageOK?'':'<div class="warn">This browser blocked saving. Export a backup now and open the file in a normal browser window.</div>'}
+  <div class="card"><h3>Your data</h3><p>All data is saved inside this browser on this computer (about ${size} KB used). Clearing browser data deletes it, so export a backup regularly and keep a copy on a pen drive or another PC.</p>
+  <div class="row"><button class="btn" onclick="exportJSON()">Export backup (.json)</button>
+  <label style="margin:0">Restore from backup<input type="file" accept=".json,application/json" onchange="importJSON(this)"></label>
+  <button class="btn alt" onclick="exportCSV()">Export invoices (.csv)</button></div></div>
+  <div class="card"><h3>Activity log</h3>${db.audit.length?`<div class="scroll" style="max-height:260px;overflow:auto"><table class="t">${db.audit.slice(0,60).map(a=>`<tr><td>${new Date(a.t).toLocaleString('en-IN')}</td><td>${esc(a.action)}</td><td>${esc(a.ref)}</td></tr>`).join('')}</table></div>`:'<p class="muted">Nothing logged yet.</p>'}</div>
+  <div class="card"><h3>Reset</h3><button class="btn red" onclick="wipe()">Delete all data</button></div>`;
+}
+let DL=null;
+try{if(window.claude&&claude.use)claude.use('downloads').then(d=>{DL=d;}).catch(()=>{});}catch(e){}
+function download(name,text,type){
+  const data=(text instanceof Blob)?text:new Blob([text],{type});
+  if(DL){DL.save({filename:name,data}).then(()=>toast('Saved')).catch(e=>{if(!e||e.code!=='declined')toast('Could not save the file here ('+((e&&e.code)||'error')+')');});return;}
+  toast('Saving files is not available in this view. Open the shared link in the Claude app or browser.');
+}
+function download_unused(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(text instanceof Blob?text:new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+function exportJSON(){download('gst-invoice-backup-'+todayISO()+'.json',JSON.stringify(db),'application/json');log('Backup exported');save();}
+function importJSON(inp){
+  const f=inp.files[0];if(!f)return;
+  const fr=new FileReader();fr.onload=async()=>{try{const o=JSON.parse(fr.result);if(!o.company||!Array.isArray(o.invoices))throw 0;if(!(await askYes('Replace all current data with this backup?','Replace')))return;db=Object.assign(blankDB(),o);save();toast('Backup restored');go('dash');}catch(e){toast('That file is not a valid backup');}};fr.readAsText(f);
+}
+function exportCSV(){
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const h=['Invoice no','Date','Customer','GSTIN','Place of supply','Taxable','CGST','SGST','IGST','Round off','Total','Paid','Status','IRN','E-way bill'];
+  const rows=db.invoices.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(i=>[i.no,i.date,i.bill.name,i.bill.gstin,i.supplyTo,i.totals.taxable,i.totals.cgst,i.totals.sgst,i.totals.igst,i.totals.roundOff,i.totals.total,paidOf(i.id),ST[stOf(i)],i.irn,i.ewayNo]);
+  download('invoices-'+todayISO()+'.csv','\ufeff'+[h,...rows].map(r=>r.map(q).join(',')).join('\n'),'text/csv');
+}
+async function wipe(){const v=await dialog('This deletes every invoice, contact and payment. Type DELETE to confirm.',{input:true,ok:'Delete everything'});if(v==='DELETE'){db=blankDB();save();go('dash');}}
+
+/* =================== sample data =================== */
+async function loadSample(){
+  if(db.invoices.length&&!(await askYes('Add the sample data to your existing data?','Add sample')))return;
+  db.company=Object.assign(db.company,{name:'JODHANI PAPERS PRIVATE LIMITED (Unit-II)',works:'Works : #182-C,Road No.7,Vasanthnarasapura Industrial Area1st Phase,Nagenhalli Village,Kora-Hobli\nTumkur - 572128',email:'info.unit2@jodhanipapers.com',state:'Karnataka',stateCode:'29',loc:'Tumkur',pin:'572128',gstin:'29AAACJ5863B1ZM',cin:'CIN:U21019KA1992PTC038321',pan:'AAACJ5863B',extra:'FSC RECYCLED 100%\nFSC Certificate No. : BV-COC-173309',bank:'Bank : KOTAK MAHINDRA BANK, A/C No.1013854604, IFSC Code:KKBK0008066',prefix:'JPTK',startNo:1,gstRate:18,einv:true,
+   terms:'1 )   Goods Sold is Subject to trade norms variation and will not be taken back under any circumstance.\n2 )   Unless otherwise specified our risk and responsibility ceases upon dispatch/delivery of goods from our premises\n3 )   Payment Net Cash/0 days: Interest @18% p.a will be charged for delayed payment.\n4 )   No claim against this bill will be entertained unless brought to our notice in writing within 48 hours\n6 )   All subject to Doddaballapur jurisdiction only\n7 )   All complaint regarding quality must be reported within three days of receipt of goods\n8 )   Weight variance upto 1% should acceptable and no complaint in this regards will be entertained\n9 )   ANY dispute difference as to jurisdiction ,interpretation or otherwise will be settled only Tumkur'});
+  const a={id:uid(),name:'SLR Packaging',address:'NO.30, 6th Cross Road, Vijayalakshmi Layout, Bagalgunte,',cityLine:'BANGALORE (Karnataka)-560073',stateName:'Karnataka',stateCode:'29',gstin:'29EHEPS3384A1Z6',pan:'',contact:'9658968423',opening:'',loc:'Bangalore',pin:'560073'};
+  const b={id:uid(),name:'SKANDA PACKAGING SOLUTIONS LLP(DLY)',address:'31/3A1 & 31/3B1, Kasaba Hobli, The Divine Power English High School Nelamangala,\nMarohalli, Bengaluru Rural, Karnataka,',cityLine:'Banglore Rural (Karnataka)-562123',stateName:'Karnataka',stateCode:'29',gstin:'29AFMFS3399R1ZL',pan:'AFMFS3399R',contact:'9741167738',opening:'',loc:'Bengaluru Rural',pin:'562123'};
+  db.parties.push(a,b);
+  const L=(w,g,s,r,ra,h)=>({desc:'Kraft Paper Natural',ord:'MAIL/28-09-26',hsn:h||'48043900',bf:'18',gsm:g,size:s,sizeUnit:'CM',reels:String(r),weight:String(w),unit:'KGS',rate:String(ra)});
+  const inv={id:uid(),no:'JPTK/26-27/4551',date:'2026-09-30',prep:'18:01',rem:'18:01',reverse:'No',lrNo:'11684',lrDt:'2026-09-30',truck:'KA01B6147',transporter:'SRI BYRAVESHWARA TRANSPORT',freight:'To Pay',driver:'LOKESH',driverMobile:'9538505696',through:'The United Traders (R)',deliveryAt:'SKANDA PACKAGING SOLUTIONS LLP(DLY)\n31/3A1 & 31/3B1, Kasaba Hobli, The Divine Power English High School - 562123',ewayNo:'192566439683',ewayDt:'2026-09-30',distance:'150',irn:'470482dd09e0ee4e8707fd1021e9d9390a3ef6f5f6310bce2a8764253315c28c',ackNo:'112632714233476',ackDt:'2026-09-30',qr:'',signedQr:'',gstRate:18,supplyTo:'29',remark:'',billId:a.id,shipId:b.id,
+   lines:[L(1263,140,115,2,37),L(3461,140,122,5,37),L(2227,175,129,3,37,'48044100'),L(1908,120,115,3,37.5),L(1459,120,129,2,37.5),L(4251,120,155,5,37.5)],status:'active',createdAt:Date.now()};
+  inv.bill=a;inv.ship=b;inv.co=JSON.parse(JSON.stringify(db.company));inv.totals=calc(inv);delete inv.totals.lines;
+  db.invoices.push(inv);db.counters['26-27']=4552;log('Sample data loaded');save();toast('Sample loaded');openInv(inv.id);
+}
+
+render();
+</script>
+</body>
+</html>
